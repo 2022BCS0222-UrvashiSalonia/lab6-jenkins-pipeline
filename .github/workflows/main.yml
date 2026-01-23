@@ -1,0 +1,42 @@
+name: Lab 4 ML CI/CD
+on: [push]
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    outputs:
+      r2_score: ${{ steps.metrics.outputs.r2_score }}
+      mse: ${{ steps.metrics.outputs.mse }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - run: pip install -r requirements.txt
+    - run: python train.py
+    - id: metrics
+      run: |
+        R2=$(jq -r '.r2_score' metrics.json)
+        MSE=$(jq -r '.mse' metrics.json)
+        echo "r2_score=$R2" >> $GITHUB_OUTPUT
+        echo "mse=$MSE" >> $GITHUB_OUTPUT
+    - uses: actions/upload-artifact@v4
+      with:
+        name: model-artifacts
+        path: artifacts/
+
+  deploy:
+    needs: train
+    if: needs.train.outputs.r2_score > vars.BEST_R2_SCORE
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with: 
+        name: model-artifacts
+    - uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - run: docker build -t urvashisalonia/lab4-ml:${{ github.sha }} .
+    - run: docker push urvashisalonia/lab4-ml:${{ github.sha }}
