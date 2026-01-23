@@ -1,23 +1,41 @@
-name: ML Flask Deployment
+name: Lab 4 ML CI/CD
 on: [push]
 jobs:
+  train:
+    runs-on: ubuntu-latest
+    outputs:
+      r2_score: ${{ steps.metrics.outputs.r2_score }}
+      mse: ${{ steps.metrics.outputs.mse }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - run: pip install -r requirements.txt
+    - run: python train.py
+    - id: metrics
+      run: |
+        R2=$(jq -r .r2_score metrics.json)
+        MSE=$(jq -r .mse metrics.json)
+        echo "r2_score=$R2" >> $GITHUB_OUTPUT
+        echo "mse=$MSE" >> $GITHUB_OUTPUT
+    - uses: actions/upload-artifact@v4
+      with:
+        name: model-artifacts
+        path: artifacts/
+  
   deploy:
+    needs: train
+    if: needs.train.outputs.r2_score > vars.BEST_R2_SCORE
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - uses: actions/download-artifact@v4
       with:
-        python-version: '3.9'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Lint code
-      run: pip install flake8 && flake8 .
-    - name: Test Flask app
-      run: python -m pytest app.py -v
-    - name: Build Docker image
-      run: docker build -t ml-flask-app .
-    - name: Test Docker container
-      run: docker run --rm ml-flask-app python -c "import app"
+        name: model-artifacts
+    - uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - run: docker build -t urvashisalonia/lab4-ml:$GITHUB_SHA .
+    - run: docker push urvashisalonia/lab4-ml:$GITHUB_SHA
