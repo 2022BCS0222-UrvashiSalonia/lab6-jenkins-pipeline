@@ -13,29 +13,28 @@ jobs:
         python-version: '3.11'
     - run: pip install -r requirements.txt
     - run: python train.py
+    - name: Install jq
+      run: sudo apt-get install jq
     - id: metrics
       run: |
-        R2=$(jq -r .r2_score metrics.json)
-        MSE=$(jq -r .mse metrics.json)
+        jq -r '.r2_score' metrics.json
+        jq -r '.mse' metrics.json
+        R2=$(jq -r '.r2_score' metrics.json)
+        MSE=$(jq -r '.mse' metrics.json)
         echo "r2_score=$R2" >> $GITHUB_OUTPUT
         echo "mse=$MSE" >> $GITHUB_OUTPUT
     - uses: actions/upload-artifact@v4
       with:
         name: model-artifacts
-        path: artifacts/
-  
+        path: |
+          artifacts/
+          metrics.json
   deploy:
     needs: train
-    if: needs.train.outputs.r2_score > vars.BEST_R2_SCORE
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4
-      with:
+      with: 
         name: model-artifacts
-    - uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - run: docker build -t urvashisalonia/lab4-ml:$GITHUB_SHA .
-    - run: docker push urvashisalonia/lab4-ml:$GITHUB_SHA
+    - run: echo "R2: $(cat metrics.json | grep r2_score)"
