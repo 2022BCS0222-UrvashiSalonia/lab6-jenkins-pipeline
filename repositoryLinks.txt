@@ -1,0 +1,3 @@
+Github: https://github.com/2022BCS0222-UrvashiSalonia/lab4
+Docker: https://hub.docker.com/r/2022bcs0222urvashi/wine_predict_2022bcs0222  
+GitHub Actions workflow: https://github.com/2022BCS0222-UrvashiSalonia/lab4/actions
