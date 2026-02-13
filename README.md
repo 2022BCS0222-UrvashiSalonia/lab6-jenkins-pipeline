@@ -1,10 +1,7 @@
-## Lab 4 - CI/CD Pipeline
+## Lab 6 - Creating a Jenkins Pipeline Equivalent to GitHub Actions
 
 Student: Urvashi Salonia
 
 Roll: 2022BCS0222
 
-This repository demonstrates automated model deployment using GitHub Actions.
-
-Temporary change in readme to test deployment
 # lab6-jenkins-pipeline
