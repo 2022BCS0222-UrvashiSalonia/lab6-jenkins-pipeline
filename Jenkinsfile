@@ -40,10 +40,10 @@ pipeline {
             steps {
                 echo 'Reading accuracy from metrics.json...'
                 script {
-                    def metricsFile = readFile('app/artifacts/metrics.json')
+                    def metricsFile = readFile('model/metrics.json')
                     def metrics = readJSON text: metricsFile
-                    CURRENT_ACCURACY = metrics.accuracy
-                    echo "Current Model Accuracy: ${CURRENT_ACCURACY}"
+                    CURRENT_ACCURACY = metrics.r2_score
+                    echo "Current Model R² Score: ${CURRENT_ACCURACY}"
                 }
             }
         }
@@ -54,14 +54,14 @@ pipeline {
                 script {
                     def bestAccuracy = 0.0
                     try {
-                        bestAccuracy = credentials('best-accuracy').toDouble()
+                        bestAccuracy = credentials('best-r2').toDouble()
                     } catch (Exception e) {
-                        echo "No baseline accuracy found. Setting to 0.0"
+                        echo "No baseline R² found. Setting to 0.0"
                         bestAccuracy = 0.0
                     }
                     
-                    echo "Best Accuracy: ${bestAccuracy}"
-                    echo "Current Accuracy: ${CURRENT_ACCURACY}"
+                    echo "Best R² Score: ${bestAccuracy}"
+                    echo "Current R² Score: ${CURRENT_ACCURACY}"
                     
                     if (CURRENT_ACCURACY.toDouble() > bestAccuracy) {
                         env.DEPLOY = "true"
@@ -108,7 +108,7 @@ pipeline {
     post {
         always {
             echo 'Archiving artifacts...'
-            archiveArtifacts artifacts: 'app/artifacts/**', allowEmptyArchive: false
+            archiveArtifacts artifacts: 'model/**', allowEmptyArchive: false
         }
         success {
             echo '✓ Pipeline completed successfully!'
